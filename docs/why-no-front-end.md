@@ -13,7 +13,10 @@ That layer used to be the whole product, because talking to a database was hard.
 
 ## What you give up
 
-- **A visual board.** Stages are a table you ask about, not cards you drag.
+- **A docket screen.** The docket is a table you ask about and a page `npm run view` renders, not a screen that sits open all day.
+- **A client portal.** Clients get reports and letters you send, not a login.
+- **E-filing and a law update service.** Filing still happens at IP Australia and IPONZ online services. The dating rules are a table your team owns and checks (`docs/compliance.md`), not a feed from a vendor.
+- **Document management.** Attachments stay in your document system; the case notes point to them.
 - **A phone app.** It runs where Claude Code runs.
 - **A vendor help desk.** This is open source. Enterprise DNA supports the installed version for businesses that want someone to call.
 

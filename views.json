@@ -5,9 +5,48 @@
     "subtitle": "IP Docketing for Claude Code: what needs attention, rendered by npm run view",
     "sections": [
       {
-        "title": "Needs attention",
-        "note": "TODO(author): point this at the industry's attention view (overdue, stuck, quiet).",
-        "sql": "select 'replace me' as item, 'TODO(author)' as why"
+        "title": "Deadlines: missed and the next 14 days",
+        "note": "Statutory dates lose the right if missed. NOT CHECKED means no second person has checked the date against the source document.",
+        "sql": "select case_ref, client, attorney, country, deadline, due_on, days_left, coalesce(verified_by, 'NOT CHECKED') as checked_by from docket where statutory and days_left <= 14 order by due_on"
+      },
+      {
+        "title": "Renewals needing action",
+        "sql": "select case_ref, client, country, title, term, due_on, grace_ends_on, state from renewal_book where state in ('lapsed','in grace') or (state in ('reminder due','awaiting instructions','instructed') and days_to_due <= 60) order by due_on"
+      },
+      {
+        "title": "Compliance findings",
+        "note": "Each rule and its source is in docs/compliance.md.",
+        "sql": "select rule, record, client, finding from compliance_findings order by severity, rule, record"
+      }
+    ]
+  },
+  {
+    "name": "renewals",
+    "title": "Renewal book",
+    "subtitle": "Every unpaid renewal, by state",
+    "sections": [
+      {
+        "title": "By state",
+        "sql": "select state, count(*)::int as renewals, min(due_on) as earliest from renewal_book group by state order by min(due_on)"
+      },
+      {
+        "title": "Every renewal",
+        "sql": "select case_ref, client, country, case_kind as kind, title, classes, term, due_on, grace_ends_on, state, reminder_sent_on, instruction from renewal_book order by due_on"
+      }
+    ]
+  },
+  {
+    "name": "workload",
+    "title": "Workload",
+    "subtitle": "Open deadlines by attorney, and the full docket",
+    "sections": [
+      {
+        "title": "By attorney",
+        "sql": "select coalesce(attorney, '(none)') as attorney, count(*) filter (where statutory and days_left < 0)::int as overdue, count(*) filter (where statutory and days_left between 0 and 7)::int as this_week, count(*) filter (where statutory and days_left between 8 and 30)::int as next_30_days, count(*) filter (where statutory and verified_by is null)::int as unchecked from docket group by 1 order by 2 desc, 3 desc"
+      },
+      {
+        "title": "Full docket",
+        "sql": "select case_ref, client, attorney, country, case_kind as kind, deadline, due_on, days_left, statutory, rule, verified_by from docket order by due_on"
       }
     ]
   }

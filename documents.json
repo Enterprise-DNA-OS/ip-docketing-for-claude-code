@@ -1,11 +1,34 @@
 [
   {
-    "name": "example",
-    "title": "TODO(author): the first document this industry must produce",
-    "for_each": "select gen_random_uuid() as id, 'Example' as name",
+    "name": "renewal-notice",
+    "title": "Renewal notice",
+    "for_each": "select c.id, c.reference || ' ' || c.name as name from clients c where exists (select 1 from renewal_book b join cases k on k.id = b.case_id where k.client_id = c.id and b.days_to_due <= 120 and b.state not in ('lapsing on instructions','lapsed'))",
     "file": "name",
     "sections": [
-      { "title": "Details", "sql": "select 'replace me' as item, $1::text as record_id" }
+      { "title": "Client", "sql": "select c.name as client, c.contact_name as attention, c.email from clients c where c.id = $1" },
+      { "title": "Rights due for renewal", "note": "If a right is not renewed it lapses and the protection ends. Reply Renew or Let lapse for each one.", "sql": "select b.title as right_name, b.case_kind as type, b.country, k.registration_no as number, b.classes, b.term as renewal, b.due_on, b.grace_ends_on as last_day_with_late_fee from renewal_book b join cases k on k.id = b.case_id where k.client_id = $1 and b.days_to_due <= 120 and b.state not in ('lapsing on instructions','lapsed') order by b.due_on" },
+      { "title": "Your instructions", "sql": "select b.title as right_name, b.country, '' as renew_or_let_lapse from renewal_book b join cases k on k.id = b.case_id where k.client_id = $1 and b.days_to_due <= 120 and b.state not in ('lapsing on instructions','lapsed') order by b.due_on" }
+    ]
+  },
+  {
+    "name": "portfolio-report",
+    "title": "Your intellectual property portfolio",
+    "for_each": "select c.id, c.reference || ' ' || c.name as name from clients c where exists (select 1 from cases k where k.client_id = c.id)",
+    "file": "name",
+    "sections": [
+      { "title": "Registered and in force", "sql": "select k.title, k.kind, k.country, k.classes, k.registration_no, k.registered_on, (select min(r.due_on) from renewals r where r.case_id = k.id and r.paid_on is null) as next_renewal from cases k where k.client_id = $1 and k.status = 'registered' order by k.title, k.country" },
+      { "title": "Applications in progress", "sql": "select k.title, k.kind, k.country, k.application_no, k.filed_on, k.status, (select min(d.due_on) from deadlines d where d.case_id = k.id and d.closed_on is null and d.statutory) as next_deadline from cases k where k.client_id = $1 and k.status in ('drafting','filed','examination','accepted') order by k.filed_on" },
+      { "title": "Lapsed, abandoned or withdrawn", "sql": "select k.title, k.kind, k.country, k.status from cases k where k.client_id = $1 and k.status in ('lapsed','abandoned','withdrawn') order by k.title" }
+    ]
+  },
+  {
+    "name": "docket-report",
+    "title": "Docket report",
+    "for_each": "select '00000000-0000-0000-0000-000000000000'::uuid as id, 'docket' as name",
+    "file": "name",
+    "sections": [
+      { "title": "Missed", "sql": "select case_ref, client, attorney, deadline, due_on, -days_left as days_overdue from docket where statutory and days_left < 0 and $1::uuid is not null order by due_on" },
+      { "title": "Next 60 days", "sql": "select case_ref, client, attorney, country, deadline, due_on, days_left, case when statutory then 'statutory' else 'watch' end as type, coalesce(verified_by, 'NOT CHECKED') as checked_by from docket where days_left between 0 and 60 and $1::uuid is not null order by due_on" }
     ]
   }
 ]
